@@ -9,10 +9,11 @@ import mesa
 import numpy as np
 import gurobipy as gp
 from gurobipy import GRB
-
-class MarketClearingOptimazation():
-        def __init__(self):   
-            #__init__()
+class MarketClearingOptimazation(mesa.Agent):
+        def __init__(self):
+#class MarketClearingOptimazation(mesa.Agent):
+        #def __init__(self, unique_id, mode):   
+            #super().__init__()
             # non-decision variables, used for tracking results
             self.vol_d = [54500.0, 12000.0, 8000.0, 7850.0, 6350.0, 6250.0, 4750.0] #self.model.database.optimization_parameter['vol_d'] #Array oder Tupel: je Agent Nachfragemenge in Abhängigkeit des Preises
             self.vol_s = [38010.0, 8010.0, 8010.0, 8010.0, 8010.0, 8010.0, 8010.0] #self.model.database.optimization_parameter['vol_s'] #Array oder Tupel: je Agent Angebotsmenge in Abhängigkeit des Preises
