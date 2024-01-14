@@ -16,9 +16,81 @@ class Storage(mesa.Agent):
             
             # set agent parameter
             self.model=model
-            self.unique_id = unique_id
+            self.unique_id = unique_id          
+            
+            # non-decision variables, used for tracking results
+            self.p_e_s = self.model.database.optimization_parameter['p_e_s']
+            self.p_e_d = self.model.database.optimization_parameter['p_e_d']
+            self.p_kwk = self.model.database.optimization_parameter['p_kwk']
+            self.p_w = self.model.database.optimization_parameter['p_w']
+            self.p_g_grid = self.model.database.optimization_parameter['p_g_grid']
+            self.p_hs = self.model.database.optimization_parameter['p_hs']
+            self.p_q_d = self.model.database.optimization_parameter['p_q_d']
+            self.p_q_s = self.model.database.optimization_parameter['p_q_s']
+            self.p_t_d = self.model.database.optimization_parameter['p_t_d']
+            self.p_t_s = self.model.database.optimization_parameter['p_t_s']
+            self.D_heat = self.model.database.optimization_parameter['D_heat']
+            self.f_heat= self.model.database.optimization_parameter['f_heat']
+            self.cap_max_q = self.model.database.optimization_parameter['cap_max_q']
+            self.cap_max_s = self.model.database.optimization_parameter['cap_max_s']
+            self.cap_max_t = self.model.database.optimization_parameter['cap_max_t']
+            self.cap_max_w = self.model.database.optimization_parameter['cap_max_w']
+            self.cap_max_kwk = self.model.database.optimization_parameter['cap_max_kwk']
+            self.cap_max_g = self.model.database.optimization_parameter['cap_max_g']
+            self.cap_max_e = self.model.database.optimization_parameter['cap_max_e']
+            self.cap_min_kwk = self.model.database.optimization_parameter['cap_min_kwk']
+            self.cap_min_g = self.model.database.optimization_parameter['cap_min_g']
+            self.cap_min_e = self.model.database.optimization_parameter['cap_min_e']
+            self.q_pv = self.model.database.optimization_parameter['q_pv'] #evtl. Berechnung aus Wetterdaten
+            self.c_e_to_h = self.model.database.optimization_parameter['c_e_to_heat'] 
+            self.c_g_to_h = self.model.database.optimization_parameter['p_g_to_heat']
+
+            self.q_oh_min = self.model.database.optimization_parameter['q_oh_min']
+            self.p_kWh = self.model.database.optimization_parameter['p_kWh']
+            self.p_dr = self.model.database.optimization_parameter['p_dr']
+            self.t_lenght = self.model.database.optimization_parameter['t_lenght']
+            self.e_kwk = self.model.database.optimization_parameter['e_kwk'] 
+            self.e_w = self.model.database.optimization_parameter['e_w']
+            self.e_g = self.model.database.optimization_parameter['e_g']
+            self.e_e = self.model.database.optimization_parameter['e_e']
+            self.e_q = self.model.database.optimization_parameter['e_q']
+            #self.e_s = self.model.database.optimization_parameter['e_s']
+            self.e_t = self.model.database.optimization_parameter['e_t']
+            self.M = self.model.database.optimization_parameter['M'] #Definition des Ms notwendig
+            
+            # update data and set up model
+            #self.update_data()
+            self.results = []
+            result = self.setup_model(True, False, False, False)
+            self.results.append(result)
+            result = self.setup_model(False, True, False, False)
+            self.results.append(result)
+            result = self.setup_model(False, False, True, False)
+            self.results.append(result)
+            result = self.setup_model(False, False, False, True)
+            self.results.append(result)
+            
+            opt_list = self.results[0][1], self.results[1][1], self.results[2][1], self.results[3][1]
+            max_value = max(opt_list)
+            max_index = opt_list.index(max_value)
+            for i in range(len(opt_list)):
+                if (i==max_index):
+                    self.opt = self.results[i]
+                    break
+            return
+            
+        def update_data(self):
+            #code
+            return
+            
+        def setup_model(self, no_net_dicount, min_net_discount, mid_net_discount, max_net_discount):
+            # time index
             ti = self.model.time_index
             rti = list(range(len(ti)))
+            
+            # industry model
+            self.m = gp.Model(f'industry_{self.unique_id}')
+            self.m.Params.OutputFlag = 0
             
             # decision variables, used in optimization
             self.q_kwk = self.m.addVars(
@@ -77,67 +149,6 @@ class Storage(mesa.Agent):
             rti, vtype=GRB.CONTINUOUS, name='Q_e_total', lb=0, ub=GRB.INFINITY)
             self.E_ges = self.m.addVars(
             rti, vtype=GRB.CONTINUOUS, name='E_ges', lb=0, ub=GRB.INFINITY)
-            
-            # non-decision variables, used for tracking results
-            self.p_e_s = self.model.database.optimization_parameter['p_e_s']
-            self.p_e_d = self.model.database.optimization_parameter['p_e_d']
-            self.p_kwk = self.model.database.optimization_parameter['p_kwk']
-            self.p_w = self.model.database.optimization_parameter['p_w']
-            self.p_g_grid = self.model.database.optimization_parameter['p_g_grid']
-            self.p_hs = self.model.database.optimization_parameter['p_hs']
-            self.p_q_d = self.model.database.optimization_parameter['p_q_d']
-            self.p_q_s = self.model.database.optimization_parameter['p_q_s']
-            self.p_t_d = self.model.database.optimization_parameter['p_t_d']
-            self.p_t_s = self.model.database.optimization_parameter['p_t_s']
-            self.D_heat = self.model.database.optimization_parameter['D_heat']
-            self.f_heat= self.model.database.optimization_parameter['f_heat']
-            self.cap_max_q = self.model.database.optimization_parameter['cap_max_q']
-            self.cap_max_s = self.model.database.optimization_parameter['cap_max_s']
-            self.cap_max_t = self.model.database.optimization_parameter['cap_max_t']
-            self.cap_max_w = self.model.database.optimization_parameter['cap_max_w']
-            self.cap_max_kwk = self.model.database.optimization_parameter['cap_max_kwk']
-            self.cap_max_g = self.model.database.optimization_parameter['cap_max_g']
-            self.cap_max_e = self.model.database.optimization_parameter['cap_max_e']
-            self.cap_min_kwk = self.model.database.optimization_parameter['cap_min_kwk']
-            self.cap_min_g = self.model.database.optimization_parameter['cap_min_g']
-            self.cap_min_e = self.model.database.optimization_parameter['cap_min_e']
-            self.q_pv = self.model.database.optimization_parameter['q_pv'] #evtl. Berechnung aus Wetterdaten
-            self.c_e_to_h = self.model.database.optimization_parameter['c_e_to_heat'] 
-            self.c_g_to_h = self.model.database.optimization_parameter['p_g_to_heat']
-            self.p_e_d = self.model.database.optimization_parameter['p_e_d']
-            self.p_e_s = self.model.database.optimization_parameter['p_e_s']
-            self.q_oh_min = self.model.database.optimization_parameter['q_oh_min']
-            self.p_kWh = self.model.database.optimization_parameter['p_kWh']
-            self.p_dr = self.model.database.optimization_parameter['p_dr']
-            self.t_lenght = self.model.database.optimization_parameter['t_lenght']
-            self.e_kwk = self.model.database.optimization_parameter['e_kwk'] 
-            self.e_w = self.model.database.optimization_parameter['e_w']
-            self.e_g = self.model.database.optimization_parameter['e_g']
-            self.e_e = self.model.database.optimization_parameter['e_e']
-            self.e_q = self.model.database.optimization_parameter['e_q']
-            #self.e_s = self.model.database.optimization_parameter['e_s']
-            self.e_t = self.model.database.optimization_parameter['e_t']
-            self.M = self.model.database.optimization_parameter['M'] #Definition des Ms notwendig
-            
-            # update data and set up model
-            self.update_data()
-            self.setup_model(True, False, False, False)
-            self.setup_model(False, True, False, False)
-            self.setup_model(False, False, True, False)
-            self.setup_model(False, False, False, True)
-            
-        def update_data(self):
-            #code
-            return
-            
-        def setup_model(self, no_net_dicount, min_net_discount, mid_net_discount, max_net_discount):
-            # time index
-            ti = self.model.time_index
-            rti = list(range(len(ti)))
-            
-            # industry model
-            self.m = gp.Model(f'industry_{self.unique_id}')
-            self.m.Params.OutputFlag = 0
             # target funktion
             self.m.setObjective(gp.quicksum(self.q_kwk[i]*self.p_kwk[i] + self.q_w[i]*self.p_w[i] + self.q_g_grid[i] * self.p_g_grid[i] + self.q_e_total_d[i]*self.p_e_d[i] - self.q_e_total_s*self.p_e_s + self.c_net[i] + self.q_hs[i]*self.p_hs[i] + self.q_q_d[i]*self.p_q_d[i] - self.q_q_s[i]*self.p_q_s[i] + self.q_t_d[i]*self.p_t_d[i] - self.q_t_s[i]*self.p_t_s[i]  for i in rti), GRB.MINIMIZE)
            
@@ -196,7 +207,7 @@ class Storage(mesa.Agent):
                 self.m.addConstr(self.OH>=8000, name='OH>=8000')
                 self.m.addConstr(self.c_net==(gp.quicksum(self.p_kWh*self.q_e_total[i] for i in rti)+self.p_dr*self.q_e_max)*0.1, name=f'calculate_c_net{j}')
             self.m.addConstr(self.E_ges<=gp.quicksum((self.q_e_total_d[i]-self.q_e_total_s)*self.e_e[i]+self.q_g_grid[i]*self.e_g[i]+self.q_kwk[i]*self.e_kwk[i]+self.q_w[i]*self.e_w[i]+self.q_q_d[i]*self.e_q[i]+self.q_t_d[i]*self.e_t[i]-self.q_q_s[i]*self.e_q[i]-self.q_t_s[i]*self.e_t[i] for i in rti))
-            return
+            return self.run_model()
         
         def run_model(self):
             rti = list(range(len(self.model.time_index)))
@@ -205,10 +216,12 @@ class Storage(mesa.Agent):
             # Check optimization status
             if self.m.status == GRB.OPTIMAL:
                 print("Optimal solution found.")
+                # Get values of decision variables
+                results = np.array([var.X for var in self.m.getVars()])
+                value_target = self.m.ObjVal
+                return results, value_target
             else:
                 print("Optimization did not converge to an optimal solution.")
+                return None, 0
         
-            # Get values of decision variables
-            results = np.array([var.X for var in self.m.getVars()])
-        
-            return results
+

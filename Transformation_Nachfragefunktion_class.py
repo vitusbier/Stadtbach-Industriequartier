@@ -106,6 +106,8 @@ class Transformation ():
                         ind_MAN+=1
                     vol+=self.bids_MAN[ind_MAN][2]
                     self.demand_MAN.append(self.bids_MAN[ind_MAN][2])
+            else:
+                self.demand_MAN = [0]*len(self.price_levels)
             if self.bool_MTA:
                 if self.bids_MTA[ind_MTA][1]>=self.price_levels[i]:
                     self.demand_MTA.append(self.bids_MTA[ind_MTA][2])
@@ -115,6 +117,8 @@ class Transformation ():
                         ind_MTA+=1
                     vol += self.bids_MTA[ind_MTA][2]
                     self.demand_MTA.append(self.bids_MTA[ind_MTA][2])
+            else:
+                self.demand_MTA = [0]*len(self.price_levels)
             if self.bool_UPM:    
                 if self.bids_UPM[ind_UPM][1]>=self.price_levels[i]:
                     self.demand_UPM.append(self.bids_UPM[ind_UPM][2])
@@ -124,6 +128,8 @@ class Transformation ():
                         ind_UPM+=1
                     vol+=self.bids_UPM[ind_UPM][2]
                     self.demand_UPM.append(self.bids_UPM[ind_UPM][2])
+            else:
+                self.demand_UPM = [0]*len(self.price_levels)
             self.demand_vol.append(vol)
         print(self.demand_vol)
         
@@ -134,12 +140,18 @@ class Transformation ():
         if self.bool_MAN==False:
             self.supply_vol+=self.bids_MAN
             self.supply_MAN=[self.bids_MAN]*len(self.price_levels)
+        else:
+            self.supply_MTA=[0.0]*len(self.price_levels)
         if self.bool_MTA==False:
             self.supply_vol+=self.bids_MTA
             self.supply_MTA=[self.bids_MTA]*len(self.price_levels)
+        else:
+            self.supply_MTA=[0.0]*len(self.price_levels)
         if self.bool_UPM==False:
                 self.supply_vol+=self.bids_UPM
-                self.supply_MTA=[self.bids_MTA]*len(self.price_levels)
+                self.supply_UPM=[self.bids_MTA]*len(self.price_levels)
+        else:
+            self.supply_UPM=[0.0]*len(self.price_levels)
         print(self.supply_vol)
         
         # Berechnung der maximalen Handelsvolumina des Quartiershandels für alle Preisniveaus und Speicherung in einer Liste aufsteigend sortiert nach Preisniveau 
