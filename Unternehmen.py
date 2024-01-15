@@ -21,101 +21,159 @@ class Storage(mesa.Agent):
             rti = list(range(len(ti)))
             
             # decision variables, used in optimization
+            # produced Amount of Electricity by combined heat and power in kWh
             self.q_kwk = self.m.addVars(
                 rti, vtype=GRB.CONTINUOUS, name='q_kwk', lb=0, ub=self.cap_max_kwk)
+            # utilized heat quantity from waste heat
             self.q_w = self.m.addVars(
                 rti, vtype=GRB.CONTINUOUS, name='q_w', lb=0, ub=self.cap_max_w)
+            # consumed gas volume form the public grid in kWh
             self.q_g_grid = self.m.addVars(
                 rti, vtype=GRB.CONTINUOUS, name='q_g_grid', lb=0, ub=GRB.INFINITY)
+            # utilized electricity quantity from the public grid in kWh
             self.q_e_total_d = self.m.addVars(
                 rti, vtype=GRB.CONTINUOUS, name='q_e_total_d', lb=0, ub=GRB.INFINITY)
+            # electricity quantity sold to the public grid in kWh
             self.q_e_total_s = self.m.addVars(
                 rti, vtype=GRB.CONTINUOUS, name='q_e_total_s', lb=0, ub=GRB.INFINITY)
+            # uncompensated heat release in kWh (q.e. waste heat released into Stadtbach)
             self.q_hs = self.m.addVars(
                 rti, vtype=GRB.CONTINUOUS, name='q_hs', lb=0, ub=GRB.INFINITY)
+            # network charges in €
             self.c_net = self.m.addVars(
                 rti, vtype=GRB.CONTINUOUS, name='c_net', lb=0, ub=GRB.INFINITY)
+            # heat quantity obtained from district trading in kWh
             self.q_q_d = self.m.addVars(
                 rti, vtype=GRB.CONTINUOUS, name='q_q_d', lb=0, ub=GRB.INFINITY)
+            # heat quantity sold by district trading in kWh
             self.q_q_s= self.m.addVars(
                 rti, vtype=GRB.CONTINUOUS, name='q_q_s', lb=0, ub=GRB.INFINITY)
+            # heat quantity obtained from district heating network in kWh
             self.q_t_d = self.m.addVars(
                 rti, vtype=GRB.CONTINUOUS, name='q_t_d', lb=0, ub=GRB.INFINITY)
+            # heat quantity sold to district heating network in kWh
             self.q_t_s = self.m.addVars(
                 rti, vtype=GRB.CONTINUOUS, name='q_t_s', lb=0, ub=GRB.INFINITY)
+            # amount of electricity obtained from public grid in kWh
             self.q_e_d = self.m.addVars(
                 rti, vtype=GRB.CONTINUOUS, name='q_e_d', lb=0, ub=self.cap_max_e)
+            # heat quantity produced with gas in kWh
             self.q_g_d = self.m.addVars(
                 rti, vtype=GRB.CONTINUOUS, name='q_g_d', lb=0, ub=self.cap_max_g)
+            # binary variable that that indicates if self produced heat must be sold (1) or not (0)
             self.b_ih = self.m.addVars(
                 rti, vtype=GRB.BINARY, name='b_ih')
+            # binary variable that indicates if heat is obtained from district trading (1) or not (0)
             self.b_q_d = self.m.addVars(
             rti, vtype=GRB.BINARY, name='b_q_d')
+            # binary variable that indicates if heat is sold via district trading (1) or not (0)
             self.b_q_s = self.m.addVars(
             rti, vtype=GRB.BINARY, name='b_q_s')
+            #
             self.b_t_d = self.m.addVars(
             rti, vtype=GRB.BINARY, name='b_t_d')
+            #
             self.b_t_s = self.m.addVars(
             rti, vtype=GRB.BINARY, name='b_t_s')
+            #
             self.b_e_total_d = self.m.addVars(
             rti, vtype=GRB.BINARY, name='b_e_total_d')
+            #
             self.b_e_total_s = self.m.addVars(
             rti, vtype=GRB.BINARY, name='b_e_total_s')
+            # remaining electricity quantity for company in kWh
             self.q_e_res = self.m.addVars(
                 rti, vtype=GRB.CONTINUOUS, name='q_e_res', lb=0, ub=GRB.INFINITY)
+            # electricity quantity need for heat production in kWh
             self.q_e_d_grid = self.m.addVars(
                 rti, vtype=GRB.CONTINUOUS, name='q_e_d_grid', lb=0, ub=GRB.INFINITY)
+            # binary variable that indicates if electricity has to be obtained from the public grid (1) or not (0)
             self.b_e_d_grid = self.m.addVars(
             rti, vtype=GRB.BINARY, name='b_g_grid')
+            # binary variable that indicates if a work hour is in that time period (1) or not (0)
             self.b_oh = self.m.addVars(
             rti, vtype=GRB.BINARY, name='b_oh')
+            # peak load in planning period
             self.q_e_max = self.m.addVars(
             rti, vtype=GRB.CONTINUOUS, name='q_e_max', lb=0, ub=GRB.INFINITY)
+            # amount of working hours in planning period
             self.OH = self.m.addVars(
             rti, vtype=GRB.CONTINUOUS, name='OH', lb=0, ub=GRB.INFINITY)
+            #
             self.Q_e_total = self.m.addVars(
             rti, vtype=GRB.CONTINUOUS, name='Q_e_total', lb=0, ub=GRB.INFINITY)
+            # total CO_2 emissions in planning period
             self.E_ges = self.m.addVars(
             rti, vtype=GRB.CONTINUOUS, name='E_ges', lb=0, ub=GRB.INFINITY)
             
             # non-decision variables, used for tracking results
+            # revenue from kWH of electricity sold via the public grid in €/kWh
             self.p_e_s = self.model.database.optimization_parameter['p_e_s']
+            # cost for a kWh of electricity bought from the public grid in €/kWh
             self.p_e_d = self.model.database.optimization_parameter['p_e_d']
+            # cost of producing one kWh of electricity wih combined heat and power in €/kWh
             self.p_kwk = self.model.database.optimization_parameter['p_kwk']
+            # cost of producing one kWh of heat with waste heat in €/kWh ???
             self.p_w = self.model.database.optimization_parameter['p_w']
+            #
             self.p_g_grid = self.model.database.optimization_parameter['p_g_grid']
+            #
             self.p_hs = self.model.database.optimization_parameter['p_hs']
+            # cost of a kwH of heat obtained from district trading in €/kWh in period t
             self.p_q_d = self.model.database.optimization_parameter['p_q_d']
+            # revenue from a kWh of heat sold via district trading in €/kWh in period t
             self.p_q_s = self.model.database.optimization_parameter['p_q_s']
+            # cost of a kWh of heat obtained from district heating network in €/kWh in period t
             self.p_t_d = self.model.database.optimization_parameter['p_t_d']
+            # revenue of a kWh of heat sold via district heating network in €/kWh in period t
             self.p_t_s = self.model.database.optimization_parameter['p_t_s']
+            # Heat quantity needed in Period t
             self.D_heat = self.model.database.optimization_parameter['D_heat']
+            # percentage of flexibility potential in period t
             self.f_heat= self.model.database.optimization_parameter['f_heat']
+            # Maximum heat capacity
             self.cap_max_q = self.model.database.optimization_parameter['cap_max_q']
+            # Maximum heat capacity of the heat storage
             self.cap_max_s = self.model.database.optimization_parameter['cap_max_s']
+            # Maximum operational heat capacity using the district heating network
             self.cap_max_t = self.model.database.optimization_parameter['cap_max_t']
+            # Maximum operational heat production capacity using waste heat
             self.cap_max_w = self.model.database.optimization_parameter['cap_max_w']
+            # Maximum operational heat production capacity using combined heat and power
             self.cap_max_kwk = self.model.database.optimization_parameter['cap_max_kwk']
+            # Maximum operational heat production capacity using gas
             self.cap_max_g = self.model.database.optimization_parameter['cap_max_g']
+            # Maximum operational heat production capacity using electricity
             self.cap_max_e = self.model.database.optimization_parameter['cap_max_e']
+            # Minimum operational heat output of combined heat and power
             self.cap_min_kwk = self.model.database.optimization_parameter['cap_min_kwk']
+            # Minimum operational heat output for gas
             self.cap_min_g = self.model.database.optimization_parameter['cap_min_g']
+            # Minimum operational heat output for electric
             self.cap_min_e = self.model.database.optimization_parameter['cap_min_e']
             self.q_pv = self.model.database.optimization_parameter['q_pv'] #evtl. Berechnung aus Wetterdaten
             self.c_e_to_h = self.model.database.optimization_parameter['c_e_to_heat'] 
             self.c_g_to_h = self.model.database.optimization_parameter['p_g_to_heat']
+            # Cost of a kWh of electricity bought from the public grid in €/kWh
             self.p_e_d = self.model.database.optimization_parameter['p_e_d']
+            # revenue from a kWh of electricity sold to the public grid in €/kWh
             self.p_e_s = self.model.database.optimization_parameter['p_e_s']
             self.q_oh_min = self.model.database.optimization_parameter['q_oh_min']
             self.p_kWh = self.model.database.optimization_parameter['p_kWh']
             self.p_dr = self.model.database.optimization_parameter['p_dr']
             self.t_lenght = self.model.database.optimization_parameter['t_lenght']
-            self.e_kwk = self.model.database.optimization_parameter['e_kwk'] 
+            # amount of co_2 from combined heat and power
+            self.e_kwk = self.model.database.optimization_parameter['e_kwk']
+            # amount of co_2 from waste heat
             self.e_w = self.model.database.optimization_parameter['e_w']
+            # amount of co_2 from gas
             self.e_g = self.model.database.optimization_parameter['e_g']
+            # amount of co_2 from electricity
             self.e_e = self.model.database.optimization_parameter['e_e']
+            # amount of co_2 from heat
             self.e_q = self.model.database.optimization_parameter['e_q']
             #self.e_s = self.model.database.optimization_parameter['e_s']
+            # amount of co_2 from heat from district heating networkW
             self.e_t = self.model.database.optimization_parameter['e_t']
             self.M = self.model.database.optimization_parameter['M'] #Definition des Ms notwendig
             
