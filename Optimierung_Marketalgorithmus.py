@@ -1,23 +1,17 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Sat Jan  6 15:30:04 2024
-
-@author: juliu
-"""
-
-import mesa
+# Importieren der benötigten Bibliotheken und Klassen
 import numpy as np
 import gurobipy as gp
 from gurobipy import GRB
-import Transformation_Nachfragefunktion_class
+from Transformation_Nachfragefunktion_class import Transformation_Nachfragefunktion_class
 
-class MarketClearingOptimazation():
-        def __init__(self):
-#class MarketClearingOptimazation(mesa.Agent):
-        #def __init__(self, unique_id, mode):   
+class Optimierung_Marktalgotithmus():
+        def __init__(self, demand_storage, supply_storage, production_MAN, d_MAN_t, q_MAN_t, production_MTA, d_MTA_t, q_MTA_t, production_UPM, d_UPM_t, q_UPM_t, epsilon_average):  
             #super().__init__()
-            # non-decision variables, used for tracking results
-            transformation = Transformation_Nachfragefunktion_class.Transformation()
+            # Initialisierung deiner Instanz der Transformation_Nachfragefunktion_class-Klasse zur Transformation der Optimierungsergebnisse zu Nachfrage-/ Angebotsfunktionen
+            transformation = Transformation_Nachfragefunktion_class(demand_storage, supply_storage, production_MAN, d_MAN_t, q_MAN_t, production_MTA, d_MTA_t, q_MTA_t, production_UPM, d_UPM_t, q_UPM_t)
+            
+            # Übernahme der Optimierungsparameter der Tramsformations-Klasse
             self.vol_d = transformation.demand_vol #[24500.0, 12000.0, 8000.0, 7850.0, 6350.0, 6250.0, 4750.0]
             self.vol_s = transformation.supply_vol #[8010.0, 8010.0, 8010.0, 8010.0, 8010.0, 8010.0, 8010.0] 
             self.demand_MAN = transformation.demand_MAN #[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
@@ -37,26 +31,34 @@ class MarketClearingOptimazation():
             self.cap_MTA = 7500.0 #self.model.database.optimization_parameter['cap_MTA']
             self.cap_UPM = 15000.0 #self.model.database.optimization_parameter['cap_UPM']
             self.cap_storage = 15000.0 #self.model.database.optimization_parameter['cap_storage']
-
+            self.epsilon_average = epsilon_average #[0.200, 0.215, 0.210, 0.190] #[kgCO2eq/kWh]: MAN, MTA, UPM, storage
+            
+            # Initialisierung des Modells
             self.setup_model()
-            
-        def update_data(self):
-            #code
             return
-            
+        
+        # Methode zur Initialisierung des Optimierungsmodells
         def setup_model(self):
+            # Anlegen eines leeren Array zur Speicherung der Ergebnisse
             self.results = []
+            
+            # Prüfung für jedes Perisniveau
             for i in range(len(self.price_levels)):
+                # Falls Perisniveau < Minimalpreis -> keine Berücksichtigung
                 if self.price_levels[i] < self.p_tele_s + self.p_fees:
                     continue
+                # Falls Perisniveau > Maximalpreis -> keine Berücksichtigung
                 if self.price_levels[i] > self.p_tele_d:
                     continue
+                # Sonst: Initialisierung des Modells für das jeweilige Preisniveau
                 self.m = gp.Model()
-                # decision variables, used in optimization
+                self.m.Params.OutputFlag = 0 #Output-Parameter werden nicht ausgegeben, wenn 0
+                
+                # Anlegen der Entscheidungsvariablen
+                # m.addVars mit Zeitindex rti -> Die EV wird als Array mit Eintrag für jede Periode angelegt
+                # m.addVar -> eine einzelne EV für der Gesamtzeitraum
                 self.vol = self.m.addVar(
                     vtype=GRB.CONTINUOUS, name='vol', lb=0, ub=GRB.INFINITY)
-                #self.p = self.m.addVar(
-                #    vtype=GRB.CONTINUOUS, name='p', lb=0, ub=GRB.INFINITY)
                 self.ratio_d = self.m.addVar(
                     vtype=GRB.CONTINUOUS, name='ratio_d', lb=0, ub=GRB.INFINITY)
                 self.ratio_s = self.m.addVar(
@@ -78,6 +80,7 @@ class MarketClearingOptimazation():
                 self.vol_s_storage = self.m.addVar(
                     vtype=GRB.CONTINUOUS, name='vol_s_storage', lb=0, ub=GRB.INFINITY)
                 
+                # Anlegen der Optimierungsparameter
                 self.p = self.price_levels[i]
                 vol_max = self.vol_max[i]
                 vol_d=self.vol_d[i]
@@ -88,13 +91,11 @@ class MarketClearingOptimazation():
                 supply_MTA = self.supply_MTA[i]
                 demand_UPM = self.demand_UPM[i]
                 supply_UPM = self.supply_UPM[i]
-                # market model
-                #self.m = gp.Model(f'storage_{self.unique_id}')
-                self.m.Params.OutputFlag = 0
-                # target funktion
+
+                # Anlegen der Zielfunktion
                 self.m.setObjective(self.vol*self.p, GRB.MAXIMIZE)
     
-                # constraints            
+                # Anlegen der Nebenbedingungen            
                 self.m.addConstr(self.vol <= vol_max, name='set_vol_max')
                 self.m.addConstr(self.ratio_d == self.vol/vol_d)
                 self.m.addConstr(self.ratio_s == self.vol/ vol_s)
@@ -115,6 +116,8 @@ class MarketClearingOptimazation():
                 self.m.addConstr(self.vol_s_UPM<=self.cap_UPM)
                 self.m.addConstr(self.vol_d_storage<=self.cap_storage)
                 self.m.addConstr(self.vol_s_storage<=self.cap_storage)
+                
+                # Optimierung für das jeweilige Preisniveau und Speicherung der Ergebnisse
                 self.results.append(self.run_model(i))
 
             # Bestimmung des optimalen Preisniveaus durch absteigende Sortierung der einzelnen Ergebnisse nach Handelsvolumen (Volumen * Preis) und Speicherung des 0. Elements
@@ -124,32 +127,26 @@ class MarketClearingOptimazation():
             self.optimales_Ergebnis=self.results[0]
             print(self.optimales_Ergebnis)
             return
-                
         
+        # Methode zur Rückgabe der Ergebnisse
+        def get_optimales_Ergebnis(self):
+            return self.optimales_Ergebnis
+        
+        # Optimierung zum Lösen des Modells
         def run_model(self, i):
+            # Optimierung des Modells ausführen
             self.m.optimize()
+            
+            # Rückgabe der Ergebnisse, falls Optimium gefunden
             if self.m.Status == GRB.OPTIMAL:
                 # Erhalten Sie den Endwert von self.vol
                 value_target = self.m.ObjVal
-                #print("Endwert der Zielfunktion: ", endwert_zielfunktion)
-                #print(f"Handelsvolumen: {self.vol.x}")
-                #print(f"Marktpreis: {self.p}")
-                #print(f"Nachfrage MAN: {self.vol_d_MAN.x}")
-                #print(f"Angebot MAN: {self.vol_s_MAN.x}")
-                #print(f"Nachfrage MTA: {self.vol_d_MTA.x}")
-                #print(f"Angebot MTA: {self.vol_s_MTA.x}")
-                #print(f"Nachfrage UPM: {self.vol_d_UPM.x}")
-                #print(f"Angebot UPM: {self.vol_s_UPM.x}")
-                #print(f"Nachfrage Speicher: {self.vol_d_storage.x}")
-                #print(f"Angebot Speicher: {self.vol_s_storage.x}")
-                results = [value_target, i, self.p, self.vol.x, self.vol_d_MAN.x, self.vol_s_MAN.x, self.vol_d_MTA.x, self.vol_s_MTA.x, self.vol_d_UPM.x, self.vol_s_UPM.x, self.vol_d_storage.x, self.vol_s_storage.x]
+                # Berechnung der durchschnittlichen Emissionen der gehandelten Wärmemenge im Quartier und Speicherung in den results (an Stelle 12)
+                self.epsilon_average_q = (self.vol_d_MAN.x * self.epsilon_average[self.t][0] + self.vol_d_MTA.x * self.epsilon_average[self.t][1] + self.vol_d_UPM.x * self.epsilon_average[self.t][2] + self.vol_d_storage.x * self.epsilon_average[self.t][3])/(self.vol_d_MAN.x + self.vol_d_MTA.x + self.vol_d_UPM.x + self.vol_d_storage.x)
+                results = [value_target, i, self.p, self.vol.x, self._MAvol_dN.x, self.vol_s_MAN.x, self.vol_d_MTA.x, self.vol_s_MTA.x, self.vol_d_UPM.x, self.vol_s_UPM.x, self.vol_d_storage.x, self.vol_s_storage.x, self.epsilon_average_q]
+            # Rückgabe eines Arrays mit 0-Werten, falls kein Optimium gefunden    
             else:
-                #print("Die Optimierung war nicht erfolgreich.")
-                #print(f"Gurobi Status: {self.m.Status}")
-                results = [0]*12
-            # get values of decision variables
-            #results = np.array([var.X for var in self.m.getVars() if 'g_d[' in var.VarName] + [var.X for var in self.m.getVars() if 'g_s[' in var.VarName])
-            
+                print("Die Optimierung war nicht erfolgreich.")
+                print(f"Gurobi Status: {self.m.Status}")
+                results = [0]*13
             return results
-        
-marketClearingOptimazation = MarketClearingOptimazation()
