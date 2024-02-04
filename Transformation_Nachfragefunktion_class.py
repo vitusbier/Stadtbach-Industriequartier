@@ -1,41 +1,37 @@
 # -*- coding: utf-8 -*-
-"""
-Spyder Editor
-
-This is a temporary script file.
-"""
+# Importieren der benötigten Bibliotheken
 import numpy as np
 
-class Transformation ():
-    def __init__(self):
+class Transformation_Nachfragefunktion_class():
+    def __init__(self, demand_storage, supply_storage, production_MAN, d_MAN_t, q_MAN_t, production_MTA, d_MTA_t, q_MTA_t, production_UPM, d_UPM_t, q_UPM_t):
         # Input: Kosten je Einheit und Menge an Einheiten der geplanten Wärme-Produktionsmengen aus der Unternehmensoptimierung
         # Output: aggregierte Angebots- (nur Menge) bzw. Nachfragefunktion (Preis und Menge) der Unternehmen und alle für den Marktalgorithmus relevanten Preisniveaus 
         self.price_levels = [] #Platzhalter zur Speicherung der Preisniveaus
         # Handelsmengen des Wärmesepeichers
-        self.demand_storage =2000
-        self.supply_storage =7000
+        self.demand_storage = demand_storage #2000
+        self.supply_storage = supply_storage #7000
         # Produktions-, Bedarfs- und geplanten Quartiershandelsdaten der Industrieunternehmen (hier: MAN) -> ergeben sich aus der jeweiligen Unternehmensoptimierung
-        self.production_MAN = np.array([["kwk", 15.0, 0.0], ["wh", 6.0, 1000.0], ["electr", 8.0, 5000.0], ["gas", 5.0, 20000.0], ["tele", 13.0, 10.0]])
-        self.d_MAN_t=25000.0 #26010
-        self.q_MAN_t=0.0
+        self.production_MAN = production_MAN #np.array([["kwk", 15.0, 0.0], ["wh", 6.0, 1000.0], ["electr", 8.0, 5000.0], ["gas", 5.0, 20000.0], ["tele", 13.0, 10.0]])
+        self.d_MAN_t= d_MAN_t #25000.0
+        self.q_MAN_t= q_MAN_t #0.0
         self.bids_MAN = self.transformation(self.production_MAN, self.d_MAN_t, self.q_MAN_t) #Errechnung der Angebots-/ Nachfragefunktion
         self.bool_MAN = str(type(self.bids_MAN))=="<class 'numpy.ndarray'>" #Angebot -> Datentyp float oder Nachfrage -> Datentyp npArray
         if self.bool_MAN: #Falls Nachfrage -> Hinzufügen der Preisniveaus des Unternehmens zu der Gesamtmenge an Preisniveaus
             self.set_price_levels(self.production_MAN)
             
         # Analog für MTA
-        self.production_MTA = np.array([["kwk", 13.5, 0], ["wh", 7.0, 100.0], ["electr", 6.5, 1500.0], ["gas", 5.5, 4000.0], ["tele", 13.0, 500.0]])
-        self.d_MTA_t=7500.0 #6100
-        self.q_MTA_t=0.0
+        self.production_MTA = production_MTA #np.array([["kwk", 13.5, 0], ["wh", 7.0, 100.0], ["electr", 6.5, 1500.0], ["gas", 5.5, 4000.0], ["tele", 13.0, 500.0]])
+        self.d_MTA_t= d_MTA_t #7500.0
+        self.q_MTA_t= q_MTA_t #0.0
         self.bids_MTA = self.transformation(self.production_MTA, self.d_MTA_t, self.q_MTA_t)
         self.bool_MTA = str(type(self.bids_MTA))=="<class 'numpy.ndarray'>"
         if self.bool_MTA:
             self.set_price_levels(self.production_MTA)
         
         # Analog für UPM        
-        self.production_UPM = np.array([["kwk", 14.0, 0], ["wh", 6.0, 150.0], ["electr", 7.5, 1500.0], ["gas", 4.8, 12500.0], ["tele", 13.0, 250.0]])
-        self.d_UPM_t=15000 #14400
-        self.q_UPM_t=0.0
+        self.production_UPM = production_UPM #np.array([["kwk", 14.0, 0], ["wh", 6.0, 150.0], ["electr", 7.5, 1500.0], ["gas", 4.8, 12500.0], ["tele", 13.0, 250.0]])
+        self.d_UPM_t= d_UPM_t #15000 #14400
+        self.q_UPM_t= q_UPM_t #0.0
         self.bids_UPM = self.transformation(self.production_UPM, self.d_UPM_t, self.q_UPM_t)
         self.bool_UPM = str(type(self.bids_UPM))=="<class 'numpy.ndarray'>"
         if self.bool_UPM:
@@ -44,7 +40,7 @@ class Transformation ():
         # Aufsteigende Sortierung der Preisniveaus in Form einer Liste ohne doppelte Einträge
         self.price_levels = set(self.price_levels)
         self.price_levels = sorted(map(float, self.price_levels))
-        print(self.price_levels)
+        #print(self.price_levels)
         # Berechnung der maximalen Handelsvolumina je Preisniveau
         self.handelsvolumina()
         return
@@ -131,7 +127,7 @@ class Transformation ():
             else:
                 self.demand_UPM = [0]*len(self.price_levels)
             self.demand_vol.append(vol)
-        print(self.demand_vol)
+        #print(self.demand_vol)
         
         # Brechnung der gesamten Angebotsmenge des Quartiershandels (anbietende Unternehmen + Speichermeng)
         # Die Angebotsmengen der einzelnen Unternehmen sind bereits in der entsprechenden Variable self.bids_NAME gespeichert
@@ -152,14 +148,14 @@ class Transformation ():
                 self.supply_UPM=[self.bids_MTA]*len(self.price_levels)
         else:
             self.supply_UPM=[0.0]*len(self.price_levels)
-        print(self.supply_vol)
+        #print(self.supply_vol)
         
         # Berechnung der maximalen Handelsvolumina des Quartiershandels für alle Preisniveaus und Speicherung in einer Liste aufsteigend sortiert nach Preisniveau 
         self.vol_max=[]
         for i in range(len(self.price_levels)):
             self.vol_max.append(min(self.demand_vol[i], self.supply_vol))
-        print(self.vol_max)
+        #print(self.vol_max)
         self.supply_vol = [self.supply_vol]*len(self.price_levels)
         return
         
-transformation = Transformation()
+#transformation_Nachfragefunktion_class = Transformation_Nachfragefunktion_class()
